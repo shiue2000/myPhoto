@@ -23,10 +23,9 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 # --- Colorization Model Load ---
 COLORIZATION_MODEL_AVAILABLE = False
 try:
-    model_folder = os.path.join(BASE_DIR, 'models')
-    proto_path = os.path.join(model_folder, 'colorization_deploy_v2.prototxt')
-    model_path = os.path.join(model_folder, 'colorization_release_v2.caffemodel')
-    pts_path = os.path.join(model_folder, 'pts_in_hull.npy')
+    proto_path = os.path.join(BASE_DIR, 'colorization_deploy_v2.prototxt')
+    model_path = os.path.join(BASE_DIR, 'colorization_release_v2.caffemodel')
+    pts_path = os.path.join(BASE_DIR, 'pts_in_hull.npy')
 
     print("Loading colorization model:")
     print(f"  Proto: {proto_path}")
@@ -49,7 +48,7 @@ except Exception:
     traceback.print_exc()
 
 # --- Constants ---
-MAX_DIMENSION = 7680  # 8K max dimension (width or height)
+MAX_DIMENSION = 7680  # 8K max dimension
 
 # --- Utility Functions ---
 def boost_saturation(img_bgr, factor=1.1):
@@ -94,14 +93,11 @@ def inpaint_image_local(input_path, mask_path, output_path):
         print(f"❌ Error: Failed to load mask from {mask_path}")
         return False
 
-    # Resize mask if needed
     if img.shape[:2] != mask.shape:
         mask = cv2.resize(mask, (img.shape[1], img.shape[0]))
 
     try:
-        # Inpaint damaged areas
         inpainted = cv2.inpaint(img, mask, 3, cv2.INPAINT_TELEA)
-        # Denoise and sharpen
         denoised = cv2.fastNlMeansDenoisingColored(inpainted, None, 3, 3, 7, 21)
         kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
         sharpened = cv2.filter2D(denoised, -1, kernel)
@@ -133,7 +129,7 @@ def colorize_image_local(input_path, output_path):
         lab = cv2.cvtColor(scaled, cv2.COLOR_BGR2LAB)
         resized = cv2.resize(lab, (224, 224))
         L = cv2.split(resized)[0]
-        L -= 50  # Centering
+        L -= 50
 
         net.setInput(cv2.dnn.blobFromImage(L))
         ab = net.forward()[0].transpose((1, 2, 0))
@@ -171,13 +167,12 @@ def index():
 
     if request.method == 'POST':
         file = request.files.get('image')
-        mask_file = request.files.get('mask')  # Optional mask for inpainting
+        mask_file = request.files.get('mask')
 
         if file and file.filename:
             filename = secure_filename(file.filename)
             name, ext = os.path.splitext(filename)
 
-            # Save uploaded original image
             orig_desktop_path = os.path.join(MY_IMAGE_FOLDER, f"{name}_original{ext}")
             file.save(orig_desktop_path)
 
@@ -185,12 +180,10 @@ def index():
             orig_static_path = os.path.join(UPLOAD_FOLDER, filename)
             file.save(orig_static_path)
 
-            # Paths for intermediate and final images
             inpainted_desktop_path = os.path.join(MY_IMAGE_FOLDER, f"{name}_inpainted{ext}")
             inpainted_static_name = f"inpainted_{name}.png"
             inpainted_static_path = os.path.join(OUTPUT_FOLDER, inpainted_static_name)
 
-            # If mask provided, do inpainting first
             if mask_file and mask_file.filename:
                 mask_filename = secure_filename(mask_file.filename)
                 mask_desktop_path = os.path.join(MY_IMAGE_FOLDER, mask_filename)
@@ -199,10 +192,9 @@ def index():
                 success = inpaint_image_local(orig_desktop_path, mask_desktop_path, inpainted_desktop_path)
                 if not success:
                     return "❌ Failed to inpaint image.", 400
-                # Copy inpainted image to static folder
+
                 Image.open(inpainted_desktop_path).save(inpainted_static_path)
 
-                # Colorize using inpainted image
                 success = colorize_image_local(inpainted_desktop_path, inpainted_desktop_path)
                 if not success:
                     return "❌ Failed to colorize inpainted image.", 400
@@ -210,7 +202,6 @@ def index():
                 enhanced_url = url_for('static', filename=f'outputs/{inpainted_static_name}')
                 original_url = url_for('static', filename=f'uploads/{filename}')
             else:
-                # No inpainting mask, just colorize original
                 enhanced_static_name = f"enhanced_{name}.png"
                 enhanced_static_path = os.path.join(OUTPUT_FOLDER, enhanced_static_name)
                 success = colorize_image_local(orig_desktop_path, enhanced_static_path)
