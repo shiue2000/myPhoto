@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: image-restoration-app
+    env: docker
+    plan: free
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: 5000
