@@ -1,3 +1,4 @@
+werkzeug
 flask
 opencv-python-headless
 Flask>=2.0.0
