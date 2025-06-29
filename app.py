@@ -1,7 +1,6 @@
 import os
 import cv2
 import numpy as np
-from PIL import Image
 from flask import Flask, request, render_template, url_for
 from werkzeug.utils import secure_filename
 
@@ -110,4 +109,4 @@ def index():
     return render_template('index.html', original_url=original_url, enhanced_url=enhanced_url)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)), debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)
