@@ -54,19 +54,6 @@ def adjust_brightness_contrast(img, brightness=0, contrast=20):
     alpha = 1 + contrast / 100.0
     return cv2.convertScaleAbs(img, alpha=alpha, beta=brightness)
 
-def inpaint_image_local(input_path, mask_path, output_path):
-    img = cv2.imread(input_path)
-    mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-    if img is None or mask is None:
-        print("Inpainting failed: input or mask image not read properly.")
-        return False
-    img = resize_img(img)
-    mask = cv2.resize(mask, (img.shape[1], img.shape[0]))
-    result = cv2.inpaint(img, mask, 3, cv2.INPAINT_TELEA)
-    result = adjust_brightness_contrast(result, brightness=-10, contrast=15)
-    cv2.imwrite(output_path, result)
-    return True
-
 def colorize_image_local(input_path, output_path):
     if not COLORIZATION_MODEL_AVAILABLE:
         print("Colorization model not available.")
@@ -101,7 +88,6 @@ def index():
     original_url = enhanced_url = None
     if request.method == 'POST':
         file = request.files.get('image')
-        mask_file = request.files.get('mask')
         if file and file.filename:
             filename = secure_filename(file.filename)
             orig_path = os.path.join(UPLOAD_FOLDER, filename)
@@ -110,14 +96,8 @@ def index():
             output_name = f"output_{filename}"
             output_path = os.path.join(OUTPUT_FOLDER, output_name)
 
-            if mask_file and mask_file.filename:
-                mask_path = os.path.join(UPLOAD_FOLDER, secure_filename(mask_file.filename))
-                mask_file.save(mask_path)
-                if not inpaint_image_local(orig_path, mask_path, output_path):
-                    return "Inpainting failed", 400
-            else:
-                if not colorize_image_local(orig_path, output_path):
-                    return "Colorization failed", 400
+            if not colorize_image_local(orig_path, output_path):
+                return "Colorization failed", 400
 
             original_url = url_for('static', filename=f'uploads/{filename}')
             enhanced_url = url_for('static', filename=f'outputs/{output_name}')
