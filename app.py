@@ -4,6 +4,9 @@ import numpy as np
 from flask import Flask, request, render_template, url_for
 from werkzeug.utils import secure_filename
 
+# Import Real-ESRGAN
+from realesrgan import RealESRGAN
+
 app = Flask(__name__, static_folder='static')
 
 # --- Directory Setup ---
@@ -16,122 +19,52 @@ os.makedirs(STATIC_FOLDER, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-MAX_DIMENSION = 2048
+# Initialize Real-ESRGAN model once when app starts
+device = 'cuda' if cv2.cuda.getCudaEnabledDeviceCount() > 0 else 'cpu'
+print(f"Using device: {device}")
 
-def resize_img(img):
-    h, w = img.shape[:2]
-    if max(h, w) > MAX_DIMENSION:
-        scale = MAX_DIMENSION / max(h, w)
-        return cv2.resize(img, (int(w * scale), int(h * scale)))
-    return img
+sr_model = RealESRGAN(device, scale=4)  # 4x upscaling
+sr_model.load_weights('RealESRGAN_x4.pth')  # Make sure the weights file is available in your environment
 
-def generate_damage_mask(image):
-    """
-    Generate a binary mask highlighting damaged/noisy areas.
-    """
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.medianBlur(gray, 5)
-
-    mask = cv2.adaptiveThreshold(
-        blurred,
-        maxValue=255,
-        adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        thresholdType=cv2.THRESH_BINARY_INV,
-        blockSize=15,
-        C=10
-    )
-
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
-    mask = cv2.dilate(mask, kernel, iterations=1)
-
-    return mask
-
-def enhance_image(input_path, output_path):
-    print(f"Reading image for enhancement: {input_path}")
+def enhance_image_realesrgan(input_path, output_path):
+    print(f"Reading image for Real-ESRGAN enhancement: {input_path}")
     img = cv2.imread(input_path)
     if img is None:
-        print("ERROR: Could not read input image (file may be corrupt or unreadable by OpenCV).")
+        print("ERROR: Could not read input image.")
         return False
-    else:
-        print(f"Image loaded successfully, shape: {img.shape}")
 
-    # Resize to manageable size for processing
-    img = resize_img(img)
+    # Convert BGR to RGB for Real-ESRGAN
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # Generate mask of damaged/noisy areas
-    mask = generate_damage_mask(img)
-    cv2.imwrite("debug_mask.png", mask)  # Optional: save mask for debugging
+    # Run Real-ESRGAN super resolution
+    sr_img = sr_model.predict(img_rgb)
 
-    # Inpaint damaged areas using the mask
-    inpainted = cv2.inpaint(img, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+    # Convert back to BGR for saving with OpenCV
+    sr_img_bgr = cv2.cvtColor(sr_img, cv2.COLOR_RGB2BGR)
 
-    # Denoise the inpainted image
-    denoised = cv2.fastNlMeansDenoisingColored(inpainted, None, 10, 10, 7, 21)
-
-    # Sharpen
-    kernel = np.array([[0, -1, 0],
-                       [-1, 5, -1],
-                       [0, -1, 0]])
-    sharpened = cv2.filter2D(denoised, -1, kernel)
-
-    # Upscale to 4K resolution (3840 x 2160) while preserving aspect ratio
-    target_w = 3840
-    target_h = 2160
-    h, w = sharpened.shape[:2]
-    scale = min(target_w / w, target_h / h)
-    new_w = int(w * scale)
-    new_h = int(h * scale)
-    upscaled = cv2.resize(sharpened, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
-
-    # Place the upscaled image on a black 4K canvas (centered)
-    canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
-    y_offset = (target_h - new_h) // 2
-    x_offset = (target_w - new_w) // 2
-    canvas[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = upscaled
-
-    cv2.imwrite(output_path, canvas)
-    print(f"Enhanced 4K image saved to {output_path}")
+    cv2.imwrite(output_path, sr_img_bgr)
+    print(f"Real-ESRGAN enhanced image saved to {output_path}")
     return True
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    print(f"UPLOAD_FOLDER: {UPLOAD_FOLDER}, exists? {os.path.exists(UPLOAD_FOLDER)}")
-    print(f"OUTPUT_FOLDER: {OUTPUT_FOLDER}, exists? {os.path.exists(OUTPUT_FOLDER)}")
-    print(f"cv2 version: {cv2.__version__}")
-
     original_url = enhanced_url = None
     if request.method == 'POST':
         file = request.files.get('image')
         if file and file.filename:
             filename = secure_filename(file.filename)
             orig_path = os.path.join(UPLOAD_FOLDER, filename)
-            print(f"Saving file to {orig_path}")
-            try:
-                file.save(orig_path)
-                print(f"File saved successfully.")
-            except Exception as e:
-                print(f"ERROR: Failed to save file: {e}")
-                return "File save failed", 400
-
-            if os.path.exists(orig_path):
-                print(f"Saved file size: {os.path.getsize(orig_path)} bytes")
-            else:
-                print("ERROR: File does not exist after saving!")
-                return "File save failed", 400
+            file.save(orig_path)
 
             output_name = f"enhanced_{filename}"
             output_path = os.path.join(OUTPUT_FOLDER, output_name)
 
-            if not enhance_image(orig_path, output_path):
-                print("Enhancement failed inside enhance_image")
+            if not enhance_image_realesrgan(orig_path, output_path):
                 return "Enhancement failed", 400
 
             original_url = url_for('static', filename=f'uploads/{filename}')
             enhanced_url = url_for('static', filename=f'outputs/{output_name}')
         else:
-            print("No file uploaded or empty filename.")
             return "No file uploaded", 400
 
     return render_template('index.html', original_url=original_url, enhanced_url=enhanced_url)
