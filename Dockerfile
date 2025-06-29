@@ -10,14 +10,17 @@ RUN apt-get update && \
         libsm6 \
         libxext6 \
         libxrender1 \
-        libgl1 && \
-    rm -rf /var/lib/apt/lists/*
+        libgl1-mesa-glx \
+        && rm -rf /var/lib/apt/lists/*
 
 # Set work directory
 WORKDIR /app
 
-# Copy app files
-COPY . /app
+# Copy all app files, including model files, templates, static
+COPY model /app/model
+
+# Confirm model files exist at build time (optional debug)
+RUN ls -l /app/model || true
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
