@@ -1,145 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Image Restoration & Colorization</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Image Restoration & Colorization</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
 
-  * {
-    box-sizing: border-box;
-  }
+    * {
+      box-sizing: border-box;
+    }
 
-  body {
-    font-family: 'Montserrat', sans-serif;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    margin: 0;
-    padding: 40px 20px;
-    color: #fff;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      margin: 0;
+      padding: 40px 20px;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-  h1 {
-    font-weight: 700;
-    font-size: 2.8rem;
-    margin-bottom: 0.3em;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    text-align: center;
-  }
+    h1 {
+      font-weight: 700;
+      font-size: 2.8rem;
+      margin-bottom: 0.3em;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      text-align: center;
+    }
 
-  form {
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
-    padding: 30px;
-    max-width: 480px;
-    width: 100%;
-    box-shadow: 0 12px 24px rgba(0,0,0,0.2);
-  }
-
-  label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 8px;
-    margin-top: 20px;
-    font-size: 1.1rem;
-  }
-
-  input[type="file"] {
-    border: 2px dashed rgba(255,255,255,0.6);
-    background: rgba(255,255,255,0.1);
-    padding: 18px 12px;
-    border-radius: 10px;
-    width: 100%;
-    color: #eee;
-    font-weight: 500;
-    cursor: pointer;
-    transition: border-color 0.3s ease;
-  }
-  input[type="file"]:hover {
-    border-color: #fff;
-  }
-
-  button {
-    margin-top: 30px;
-    width: 100%;
-    padding: 14px 0;
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #fff;
-    border: none;
-    border-radius: 30px;
-    background: linear-gradient(90deg, #ff7e5f, #feb47b);
-    cursor: pointer;
-    box-shadow: 0 6px 12px rgba(255,126,95,0.7);
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-  }
-  button:hover {
-    background: linear-gradient(90deg, #feb47b, #ff7e5f);
-    box-shadow: 0 10px 20px rgba(255,180,120,0.9);
-  }
-
-  .preview {
-    margin-top: 40px;
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    flex-wrap: wrap;
-    max-width: 900px;
-    width: 100%;
-  }
-
-  .preview > div {
-    flex: 1 1 45%;
-    text-align: center;
-  }
-
-  .preview img {
-    max-width: 100%;
-    max-height: 350px;
-    border-radius: 15px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
-    border: 3px solid rgba(255, 255, 255, 0.25);
-    object-fit: contain;
-    background: #222;
-  }
-
-  .preview h3 {
-    margin-bottom: 12px;
-    font-weight: 700;
-    font-size: 1.3rem;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  }
-
-  .download-link {
-    display: inline-block;
-    margin-top: 10px;
-    font-size: 1.2rem;
-    color: #fff;
-    text-decoration: none;
-    background: rgba(255,255,255,0.2);
-    padding: 8px 14px;
-    border-radius: 8px;
-    transition: background 0.3s ease;
-  }
-  .download-link:hover {
-    background: rgba(255,255,255,0.35);
-  }
-
-  @media (max-width: 640px) {
     form {
-      max-width: 100%;
-      padding: 24px 20px;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.2);
     }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      margin-top: 20px;
+      font-size: 1.1rem;
+    }
+
+    input[type="file"] {
+      border: 2px dashed rgba(255,255,255,0.6);
+      background: rgba(255,255,255,0.1);
+      padding: 18px 12px;
+      border-radius: 10px;
+      width: 100%;
+      color: #eee;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.3s ease;
+    }
+
+    input[type="file"]:hover {
+      border-color: #fff;
+    }
+
+    button {
+      margin-top: 30px;
+      width: 100%;
+      padding: 14px 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      background: linear-gradient(90deg, #ff7e5f, #feb47b);
+      cursor: pointer;
+      box-shadow: 0 6px 12px rgba(255,126,95,0.7);
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(90deg, #feb47b, #ff7e5f);
+      box-shadow: 0 10px 20px rgba(255,180,120,0.9);
+    }
+
+    .preview {
+      margin-top: 40px;
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      max-width: 900px;
+      width: 100%;
+    }
+
     .preview > div {
-      flex-basis: 100%;
+      flex: 1 1 45%;
+      text-align: center;
     }
-  }
-</style>
+
+    .preview img {
+      max-width: 100%;
+      max-height: 350px;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      object-fit: contain;
+      background: #222;
+    }
+
+    .preview h3 {
+      margin-bottom: 12px;
+      font-weight: 700;
+      font-size: 1.3rem;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .download-link {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 1.2rem;
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255,255,255,0.2);
+      padding: 8px 14px;
+      border-radius: 8px;
+      transition: background 0.3s ease;
+    }
+
+    .download-link:hover {
+      background: rgba(255,255,255,0.35);
+    }
+
+    .error {
+      margin-top: 20px;
+      color: #ffcccc;
+      background: rgba(255, 0, 0, 0.2);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-align: center;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    @media (max-width: 640px) {
+      form {
+        max-width: 100%;
+        padding: 24px 20px;
+      }
+
+      .preview > div {
+        flex-basis: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -151,6 +167,10 @@
 
     <button type="submit">Enhance &amp; Colorize</button>
   </form>
+
+  {% if error %}
+    <div class="error">{{ error }}</div>
+  {% endif %}
 
   {% if original_url and enhanced_url %}
     <section class="preview" aria-label="Image preview section">
