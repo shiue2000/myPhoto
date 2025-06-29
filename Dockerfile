@@ -16,16 +16,8 @@ RUN apt-get update && \
 # Set work directory
 WORKDIR /app
 
-# Copy all app files, including model files, templates, static
+# Copy app code, templates, static
 COPY . /app
-COPY model/ /app/model/
-
-
-
-# Confirm model files exist at build time (optional debug)
-RUN ls -l /app/model || true
-RUN ls -lh /app/model && sha256sum /app/model/colorization_release_v2.caffemodel
-
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
