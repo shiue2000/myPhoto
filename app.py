@@ -131,9 +131,9 @@ def index():
             output_name = f"output_{filename}"
             output_path = os.path.join(OUTPUT_FOLDER, output_name)
 
-            if not colorize_image_local(orig_path, output_path):
-                print("Colorization failed inside colorize_image_local")
-                return "Colorization failed", 400
+            # if not colorize_image_local(orig_path, output_path):
+            #     print("Colorization failed inside colorize_image_local")
+            #     return "Colorization failed", 400
 
             original_url = url_for('static', filename=f'uploads/{filename}')
             enhanced_url = url_for('static', filename=f'outputs/{output_name}')
