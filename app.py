@@ -18,9 +18,14 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # --- Model paths ---
+
 protoPath = os.path.join(MODEL_FOLDER, 'colorization_deploy_v2.prototxt')
 modelPath = os.path.join(MODEL_FOLDER, 'colorization_release_v2.caffemodel')
 hullPath = os.path.join(MODEL_FOLDER, 'pts_in_hull.npy')
+
+assert os.path.exists(protoPath), f"Missing proto file: {protoPath}"
+assert os.path.exists(modelPath), f"Missing model file: {modelPath}"
+assert os.path.exists(hullPath), f"Missing hull file: {hullPath}"
 
 COLORIZATION_MODEL_AVAILABLE = False
 try:
@@ -58,6 +63,7 @@ def colorize_image_local(input_path, output_path):
     if not COLORIZATION_MODEL_AVAILABLE:
         print("Colorization model not available.")
         return False
+    print(f"Trying to read image: {input_path}")
     img = cv2.imread(input_path)
     if img is None:
         print("Colorization failed: could not read input image.")
@@ -72,10 +78,14 @@ def colorize_image_local(input_path, output_path):
     L_resized = cv2.resize(L, (224, 224))
     L_resized -= 50  # mean-centering
 
-    net.setInput(cv2.dnn.blobFromImage(L_resized))
-    ab = net.forward()[0].transpose(1, 2, 0)
-    ab = cv2.resize(ab, (w, h))
+    try:
+        net.setInput(cv2.dnn.blobFromImage(L_resized))
+        ab = net.forward()[0].transpose(1, 2, 0)
+    except Exception as e:
+        print(f"Error during model forward: {e}")
+        return False
 
+    ab = cv2.resize(ab, (w, h))
     out_lab = np.concatenate((L[:, :, np.newaxis], ab), axis=2)
     out_bgr = cv2.cvtColor(out_lab, cv2.COLOR_Lab2BGR)
     out_bgr = np.clip(out_bgr * 255, 0, 255).astype("uint8")
