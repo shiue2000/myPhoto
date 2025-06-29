@@ -1,0 +1,12 @@
+# .gitignore
+__pycache__/
+*.pyc
+static/uploads/*
+static/outputs/*
+model/*
+*.caffemodel
+*.prototxt
+*.npy
+.env
+venv/
+*.log
