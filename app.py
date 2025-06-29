@@ -25,6 +25,28 @@ def resize_img(img):
         return cv2.resize(img, (int(w * scale), int(h * scale)))
     return img
 
+def generate_damage_mask(image):
+    """
+    Generate a binary mask highlighting damaged/noisy areas.
+    """
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.medianBlur(gray, 5)
+
+    mask = cv2.adaptiveThreshold(
+        blurred,
+        maxValue=255,
+        adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        thresholdType=cv2.THRESH_BINARY_INV,
+        blockSize=15,
+        C=10
+    )
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
+    mask = cv2.dilate(mask, kernel, iterations=1)
+
+    return mask
+
 def enhance_image(input_path, output_path):
     print(f"Reading image for enhancement: {input_path}")
     img = cv2.imread(input_path)
@@ -34,8 +56,18 @@ def enhance_image(input_path, output_path):
     else:
         print(f"Image loaded successfully, shape: {img.shape}")
 
-    # Denoise
-    denoised = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
+    # Resize to manageable size for processing
+    img = resize_img(img)
+
+    # Generate mask of damaged/noisy areas
+    mask = generate_damage_mask(img)
+    cv2.imwrite("debug_mask.png", mask)  # Optional: save mask for debugging
+
+    # Inpaint damaged areas using the mask
+    inpainted = cv2.inpaint(img, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+
+    # Denoise the inpainted image
+    denoised = cv2.fastNlMeansDenoisingColored(inpainted, None, 10, 10, 7, 21)
 
     # Sharpen
     kernel = np.array([[0, -1, 0],
@@ -52,7 +84,7 @@ def enhance_image(input_path, output_path):
     new_h = int(h * scale)
     upscaled = cv2.resize(sharpened, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
 
-    # Optional: place the upscaled image on a black 4K canvas if you want exact 4K output
+    # Place the upscaled image on a black 4K canvas (centered)
     canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
     y_offset = (target_h - new_h) // 2
     x_offset = (target_w - new_w) // 2
