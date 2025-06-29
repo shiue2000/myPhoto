@@ -18,7 +18,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # --- Model paths ---
-
 protoPath = os.path.join(MODEL_FOLDER, 'colorization_deploy_v2.prototxt')
 modelPath = os.path.join(MODEL_FOLDER, 'colorization_release_v2.caffemodel')
 hullPath = os.path.join(MODEL_FOLDER, 'pts_in_hull.npy')
@@ -60,16 +59,18 @@ def adjust_brightness_contrast(img, brightness=0, contrast=20):
     return cv2.convertScaleAbs(img, alpha=alpha, beta=brightness)
 
 def colorize_image_local(input_path, output_path):
+    print(f"Reading image for colorization: {input_path}")
+    img = cv2.imread(input_path)
+    if img is None:
+        print("ERROR: Could not read input image (file may be corrupt or unreadable by OpenCV).")
+        return False
+    else:
+        print(f"Image loaded successfully, shape: {img.shape}")
+
     if not COLORIZATION_MODEL_AVAILABLE:
         print("Colorization model not available.")
         return False
-    print(f"Trying to read image: {input_path}")
-    img = cv2.imread(input_path)
-    if img is None:
-        print("ERROR: Could not read image. Is it a valid image file?")
-        return False
-    else:
-        print(f"Image read successfully. Shape: {img.shape}")
+
     img = resize_img(img)
     h, w = img.shape[:2]
 
@@ -84,7 +85,7 @@ def colorize_image_local(input_path, output_path):
         net.setInput(cv2.dnn.blobFromImage(L_resized))
         ab = net.forward()[0].transpose(1, 2, 0)
     except Exception as e:
-        print(f"Error during model forward: {e}")
+        print(f"ERROR during DNN forward pass: {e}")
         return False
 
     ab = cv2.resize(ab, (w, h))
@@ -93,31 +94,55 @@ def colorize_image_local(input_path, output_path):
     out_bgr = np.clip(out_bgr * 255, 0, 255).astype("uint8")
     out_bgr = adjust_brightness_contrast(out_bgr, brightness=-10, contrast=15)
     cv2.imwrite(output_path, out_bgr)
+    print(f"Colorized image saved to {output_path}")
     return True
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+
+    print(f"protoPath: {protoPath}, exists? {os.path.exists(protoPath)}")
+    print(f"modelPath: {modelPath}, exists? {os.path.exists(modelPath)}")
+    print(f"hullPath: {hullPath}, exists? {os.path.exists(hullPath)}")
+    print(f"UPLOAD_FOLDER: {UPLOAD_FOLDER}, exists? {os.path.exists(UPLOAD_FOLDER)}")
+    print(f"OUTPUT_FOLDER: {OUTPUT_FOLDER}, exists? {os.path.exists(OUTPUT_FOLDER)}")
+    print(f"COLORIZATION_MODEL_AVAILABLE: {COLORIZATION_MODEL_AVAILABLE}")
+    print(f"cv2 version: {cv2.__version__}")
+
     original_url = enhanced_url = None
     if request.method == 'POST':
         file = request.files.get('image')
         if file and file.filename:
             filename = secure_filename(file.filename)
             orig_path = os.path.join(UPLOAD_FOLDER, filename)
-            file.save(orig_path)
+            print(f"Saving file to {orig_path}")
+            try:
+                file.save(orig_path)
+                print(f"File saved successfully.")
+            except Exception as e:
+                print(f"ERROR: Failed to save file: {e}")
+                return "File save failed", 400
+
+            if os.path.exists(orig_path):
+                print(f"Saved file size: {os.path.getsize(orig_path)} bytes")
+            else:
+                print("ERROR: File does not exist after saving!")
+                return "File save failed", 400
 
             output_name = f"output_{filename}"
             output_path = os.path.join(OUTPUT_FOLDER, output_name)
 
-            print(f"Saved input image at: {orig_path}")
-            print(f"Does file exist? {os.path.exists(orig_path)}")
-            print(f"File size: {os.path.getsize(orig_path) if os.path.exists(orig_path) else 'N/A'} bytes")
-
             if not colorize_image_local(orig_path, output_path):
+                print("Colorization failed inside colorize_image_local")
                 return "Colorization failed", 400
 
             original_url = url_for('static', filename=f'uploads/{filename}')
             enhanced_url = url_for('static', filename=f'outputs/{output_name}')
+        else:
+            print("No file uploaded or empty filename.")
+            return "No file uploaded", 400
+
     return render_template('index.html', original_url=original_url, enhanced_url=enhanced_url)
 
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=True)
