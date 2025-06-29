@@ -133,7 +133,8 @@ def index():
 
             if not colorize_image_local(orig_path, output_path):
                 print("Colorization failed inside colorize_image_local")
-                return "Colorization failed", 400
+                return render_template('index.html',
+                                       error="Colorization failed due to model loading issue"), 400
 
             original_url = url_for('static', filename=f'uploads/{filename}')
             enhanced_url = url_for('static', filename=f'outputs/{output_name}')
