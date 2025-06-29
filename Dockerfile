@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Copy all app files, including model files, templates, static
 COPY . /app
-COPY model /app/model
+COPY model/ /app/model/
 
 
 
