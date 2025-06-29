@@ -1,8 +1,9 @@
 FROM python:3.9-slim
 
+# Avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
-ENV FLASK_ENV=production
 
+# Install system dependencies required by OpenCV
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libglib2.0-0 \
@@ -12,10 +13,25 @@ RUN apt-get update && \
         libgl1-mesa-glx \
         && rm -rf /var/lib/apt/lists/*
 
+# Set work directory
 WORKDIR /app
-COPY . /app/
 
-RUN ls -lh /app/model && sha256sum /app/model/colorization_release_v2.caffemodel || true
-RUN pip install -r requirements.txt
+# Copy all app files, including model files, templates, static
+COPY . /app/
+#COPY model/ /app/model/
+
+
+
+# Confirm model files exist at build time (optional debug)
+RUN ls -l /app/model || true
+RUN ls -lh /app/model && sha256sum /app/model/colorization_release_v2.caffemodel
+
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Expose port
 EXPOSE 5000
+
+# Run the app
 CMD ["python", "app.py"]
