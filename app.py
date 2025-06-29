@@ -34,8 +34,6 @@ def enhance_image(input_path, output_path):
     else:
         print(f"Image loaded successfully, shape: {img.shape}")
 
-    img = resize_img(img)
-
     # Denoise
     denoised = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
 
@@ -45,12 +43,25 @@ def enhance_image(input_path, output_path):
                        [0, -1, 0]])
     sharpened = cv2.filter2D(denoised, -1, kernel)
 
-    # Optional: upscale by 1.5x
-    upscale = cv2.resize(sharpened, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
+    # Upscale to 4K resolution (3840 x 2160) while preserving aspect ratio
+    target_w = 3840
+    target_h = 2160
+    h, w = sharpened.shape[:2]
+    scale = min(target_w / w, target_h / h)
+    new_w = int(w * scale)
+    new_h = int(h * scale)
+    upscaled = cv2.resize(sharpened, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
 
-    cv2.imwrite(output_path, upscale)
-    print(f"Enhanced image saved to {output_path}")
+    # Optional: place the upscaled image on a black 4K canvas if you want exact 4K output
+    canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+    y_offset = (target_h - new_h) // 2
+    x_offset = (target_w - new_w) // 2
+    canvas[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = upscaled
+
+    cv2.imwrite(output_path, canvas)
+    print(f"Enhanced 4K image saved to {output_path}")
     return True
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
