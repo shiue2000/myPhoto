@@ -66,8 +66,10 @@ def colorize_image_local(input_path, output_path):
     print(f"Trying to read image: {input_path}")
     img = cv2.imread(input_path)
     if img is None:
-        print("Colorization failed: could not read input image.")
+        print("ERROR: Could not read image. Is it a valid image file?")
         return False
+    else:
+        print(f"Image read successfully. Shape: {img.shape}")
     img = resize_img(img)
     h, w = img.shape[:2]
 
@@ -105,6 +107,10 @@ def index():
 
             output_name = f"output_{filename}"
             output_path = os.path.join(OUTPUT_FOLDER, output_name)
+
+            print(f"Saved input image at: {orig_path}")
+            print(f"Does file exist? {os.path.exists(orig_path)}")
+            print(f"File size: {os.path.getsize(orig_path) if os.path.exists(orig_path) else 'N/A'} bytes")
 
             if not colorize_image_local(orig_path, output_path):
                 return "Colorization failed", 400
